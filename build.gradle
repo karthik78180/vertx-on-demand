@@ -1,0 +1,56 @@
+plugins {
+  id 'java'
+  id 'application'
+  id 'maven-publish'
+  id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+    implementation 'io.vertx:vertx-core:5.0.1'
+    implementation 'io.vertx:vertx-web:5.0.1'
+    implementation 'com.google.protobuf:protobuf-java:4.31.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+    testImplementation 'org.mockito:mockito-core:5.4.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.4.0'
+    testImplementation 'io.vertx:vertx-junit5:5.0.1'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+  mainClass = 'com.example.MainServer'
+}
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
+}
+
+shadowJar {
+  archiveClassifier.set('all')
+}
