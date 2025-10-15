@@ -5,13 +5,14 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RequestBody;
 
@@ -19,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class DeploymentHandlerTest {
 
     @Mock
@@ -47,12 +49,16 @@ class DeploymentHandlerTest {
         handler = new DeploymentHandler(vertx);
         headers = MultiMap.caseInsensitiveMultiMap();
         
-        when(context.request()).thenReturn(request);
-        when(context.response()).thenReturn(response);
-        when(context.body()).thenReturn(requestBody);
-        when(request.headers()).thenReturn(headers);
-        when(response.putHeader(anyString(), anyString())).thenReturn(response);
-        when(context.pathParam("address")).thenReturn("test.v1");
+        // lenient stubbing so tests that don't exercise every interaction don't fail
+        lenient().when(context.request()).thenReturn(request);
+        lenient().when(context.response()).thenReturn(response);
+        lenient().when(context.body()).thenReturn(requestBody);
+        lenient().when(request.headers()).thenReturn(headers);
+        // mark as lenient to avoid unnecessary stubbing failures when response isn't used
+        lenient().when(response.putHeader(anyString(), anyString())).thenReturn(response);
+        // ensure chained calls like response.setStatusCode(...).putHeader(...) don't NPE
+        lenient().when(response.setStatusCode(anyInt())).thenReturn(response);
+        lenient().when(context.pathParam("address")).thenReturn("test.v1");
     }
 
     @Test
