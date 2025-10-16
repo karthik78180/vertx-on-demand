@@ -16,11 +16,24 @@ public class RequestValidator {
      * @return true if the request is valid, false otherwise
      */
     public static boolean validateProtobufRequest(RoutingContext context) {
-        if (!context.request().headers().get("Content-Type").contains("octet-stream")) {
+        // Defensive null checks: many parts of the RoutingContext can be null in unit tests
+        if (context == null) {
+            return true;
+        }
+
+        String contentType = null;
+        if (context.request() != null && context.request().headers() != null) {
+            contentType = context.request().headers().get("Content-Type");
+        }
+
+        if (contentType == null || !contentType.contains("octet-stream")) {
             return true; // Not a protobuf request, skip validation
         }
 
-        Buffer requestBody = context.body().buffer();
+        Buffer requestBody = null;
+        if (context.body() != null) {
+            requestBody = context.body().buffer();
+        }
         if (requestBody == null) {
             context.response()
                 .setStatusCode(400)

@@ -32,13 +32,17 @@ class RequestValidatorTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        headers = MultiMap.caseInsensitiveMultiMap();
-        when(context.request()).thenReturn(request);
-        when(context.response()).thenReturn(response);
-        when(context.body()).thenReturn(requestBody);
-        when(request.headers()).thenReturn(headers);
-        when(response.putHeader(anyString(), anyString())).thenReturn(response);
+    MockitoAnnotations.openMocks(this);
+    headers = MultiMap.caseInsensitiveMultiMap();
+    // lenient stubbing to avoid UnnecessaryStubbingException in tests
+    lenient().when(context.request()).thenReturn(request);
+    lenient().when(context.response()).thenReturn(response);
+    lenient().when(context.body()).thenReturn(requestBody);
+    lenient().when(request.headers()).thenReturn(headers);
+    // mark as lenient to avoid unnecessary stubbing failures when response isn't used
+    lenient().when(response.putHeader(anyString(), anyString())).thenReturn(response);
+    // ensure chained calls like response.setStatusCode(...).putHeader(...) don't NPE
+    lenient().when(response.setStatusCode(anyInt())).thenReturn(response);
     }
 
     @Test
@@ -60,7 +64,8 @@ class RequestValidatorTest {
 
         assertFalse(result);
         verify(response).setStatusCode(400);
-        verify(response).end((Buffer) argThat(json ->
+        // response.end is called with a String body (JSON encoded)
+        verify(response).end((String) argThat(json ->
             new JsonObject((String) json).getString("error").equals("Missing protobuf payload")
         ));
     }
