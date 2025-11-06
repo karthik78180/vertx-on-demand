@@ -17,6 +17,19 @@ dependencies {
     implementation 'io.vertx:vertx-web:5.0.1'
     implementation 'com.google.protobuf:protobuf-java:4.31.1'
 
+    // OpenTelemetry Core
+    implementation 'io.opentelemetry:opentelemetry-api:1.41.0'
+    implementation 'io.opentelemetry:opentelemetry-sdk:1.41.0'
+    implementation 'io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.41.0'
+
+    // OpenTelemetry Exporters
+    implementation 'io.opentelemetry:opentelemetry-exporter-prometheus:1.41.0-alpha'
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.41.0'
+    implementation 'io.opentelemetry:opentelemetry-exporter-logging:1.41.0'
+
+    // OpenTelemetry Semantic Conventions
+    implementation 'io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha'
+
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
     testImplementation 'org.mockito:mockito-core:5.4.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.4.0'
