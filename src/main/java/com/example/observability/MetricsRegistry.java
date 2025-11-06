@@ -5,7 +5,7 @@ import io.opentelemetry.api.metrics.Meter;
 
 /**
  * Central registry for all application metrics.
- * Initializes and provides access to JVM, Classloader, HTTP, and Deployment metrics.
+ * Initializes and provides access to JVM, Classloader, HTTP, Deployment, and Thread metrics.
  */
 public class MetricsRegistry {
 
@@ -15,6 +15,7 @@ public class MetricsRegistry {
     private final ClassloaderMetrics classloaderMetrics;
     private final HttpMetrics httpMetrics;
     private final DeploymentMetrics deploymentMetrics;
+    private final ThreadMetrics threadMetrics;
 
     private MetricsRegistry(Meter meter) {
         // Initialize metrics in order (JVM first, as others may depend on it)
@@ -22,6 +23,7 @@ public class MetricsRegistry {
         this.classloaderMetrics = new ClassloaderMetrics(meter, jvmMetrics);
         this.httpMetrics = new HttpMetrics(meter);
         this.deploymentMetrics = new DeploymentMetrics(meter);
+        this.threadMetrics = new ThreadMetrics(meter);
 
         System.out.println("[MetricsRegistry] All metrics initialized successfully");
     }
@@ -86,6 +88,13 @@ public class MetricsRegistry {
     }
 
     /**
+     * Get thread metrics (event loop, worker, blocked, virtual).
+     */
+    public ThreadMetrics threads() {
+        return threadMetrics;
+    }
+
+    /**
      * Perform comprehensive health checks.
      * Logs warnings for any detected issues.
      *
@@ -107,6 +116,25 @@ public class MetricsRegistry {
             System.err.println("[HealthCheck] CRITICAL: Classloader leak detected");
             classloaderMetrics.performLeakCheck();
             healthy = false;
+        }
+
+        // Check for blocked event loop threads (CRITICAL!)
+        if (threadMetrics.isEventLoopBlocked()) {
+            System.err.println("[HealthCheck] CRITICAL: Event loop thread(s) blocked!");
+            System.err.println("[HealthCheck] Blocked event loops: " + threadMetrics.getBlockedEventLoopCount());
+            healthy = false;
+        }
+
+        // Check for blocked threads
+        int blockedThreads = threadMetrics.getBlockedThreadCount();
+        if (blockedThreads > 10) {
+            System.err.println("[HealthCheck] WARNING: " + blockedThreads + " threads blocked");
+            System.err.println(threadMetrics.getBlockedThreadReport());
+        }
+
+        // Log virtual thread usage
+        if (threadMetrics.isUsingVirtualThreads()) {
+            System.out.println("[HealthCheck] INFO: Virtual threads detected (Java 21+)");
         }
 
         return healthy;
