@@ -46,8 +46,10 @@ class MainServerTest {
     }
 
     @Test
-    void testDeployRouteExists(Vertx vertx, VertxTestContext testContext) {
+    void testServerIsInitialized(Vertx vertx, VertxTestContext testContext) {
         assertNotNull(server);
+        // Route integration tests (actual HTTP requests to /deploy, /undeploy, etc.)
+        // are covered by integration tests run against the deployed server
         testContext.completeNow();
     }
 }

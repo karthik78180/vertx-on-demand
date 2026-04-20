@@ -139,7 +139,7 @@ class DeploymentHandlerTest {
     }
 
     @Test
-    void testDeployWithNullBodyReturnsBadRequest() {
+    void testDeployWithNullBodyReturnsInternalServerError() {
         // Setup
         when(context.body()).thenReturn(null);
 
