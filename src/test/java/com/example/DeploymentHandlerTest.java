@@ -118,7 +118,7 @@ class DeploymentHandlerTest {
         // Setup
         headers.add("Content-Type", "application/json");
         when(requestBody.buffer()).thenReturn(Buffer.buffer("{}"));
-        
+
         // Add mock verticle to deployed map
         try {
             var deployedField = DeploymentHandler.class.getDeclaredField("deployed");
@@ -136,5 +136,55 @@ class DeploymentHandlerTest {
         // Verify
         verify(mockVerticle).handle(context);
         verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testDeployWithNullBodyReturnsBadRequest() {
+        // Setup
+        when(context.body()).thenReturn(null);
+
+        // Execute
+        handler.deploy(context);
+
+        // Verify
+        verify(response).setStatusCode(500);
+    }
+
+    @Test
+    void testDeployWithMissingRepoFieldReturnsBadRequest() {
+        // Setup
+        io.vertx.core.json.JsonObject body = new io.vertx.core.json.JsonObject(); // No "repo" field
+        when(requestBody.asJsonObject()).thenReturn(body);
+        when(context.body()).thenReturn(requestBody);
+
+        // Execute
+        handler.deploy(context);
+
+        // Verify
+        verify(response).setStatusCode(400);
+    }
+
+    @Test
+    void testHandleWithNonExistentAddressReturns404() {
+        // Setup
+        when(context.pathParam("address")).thenReturn("nonexistent.v1");
+
+        // Execute
+        handler.handle(context);
+
+        // Verify
+        verify(response).setStatusCode(404);
+    }
+
+    @Test
+    void testUndeployWhenNothingDeployedReturnSuccess() {
+        // Setup
+        // No verticles deployed
+
+        // Execute
+        handler.undeploy(context);
+
+        // Verify
+        verify(response).end("✅ Undeployed all verticles");
     }
 }
