@@ -99,4 +99,66 @@ class RequestValidatorTest {
         assertTrue(result);
         verify(response, never()).setStatusCode(anyInt());
     }
+
+    @Test
+    void testValidateWithNullContextReturnsTrue() {
+        boolean result = RequestValidator.validateProtobufRequest(null);
+        assertTrue(result);
+    }
+
+    @Test
+    void testValidateWithoutContentTypeHeaderSkipsValidation() {
+        // ContentType header not set
+        headers.remove("Content-Type");
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertTrue(result);
+        verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testValidateWithNonProtobufContentTypeSkipsValidation() {
+        headers.add("Content-Type", "text/plain");
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertTrue(result);
+        verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testValidateWithNullBodyReturnsFalse() {
+        headers.add("Content-Type", "application/octet-stream");
+        when(requestBody.buffer()).thenReturn(null);
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertFalse(result);
+        verify(response).setStatusCode(400);
+    }
+
+    @Test
+    void testValidateWithExactMaxSizeReturnsTrue() {
+        headers.add("Content-Type", "application/octet-stream");
+        Buffer buffer = Buffer.buffer(new byte[1024 * 1024]); // Exactly 1MB
+        when(requestBody.buffer()).thenReturn(buffer);
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertTrue(result);
+        verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testValidateWithOversizedPayloadReturnsFalse() {
+        headers.add("Content-Type", "application/octet-stream");
+        Buffer buffer = Buffer.buffer(new byte[1024 * 1024 + 1]); // 1MB + 1 byte
+        when(requestBody.buffer()).thenReturn(buffer);
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertFalse(result);
+        verify(response).setStatusCode(413);
+    }
 }
