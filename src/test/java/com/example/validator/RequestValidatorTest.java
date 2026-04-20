@@ -7,13 +7,18 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import io.vertx.core.MultiMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RequestValidatorTest {
 
     @Mock
@@ -32,17 +37,16 @@ class RequestValidatorTest {
 
     @BeforeEach
     void setUp() {
-    MockitoAnnotations.openMocks(this);
-    headers = MultiMap.caseInsensitiveMultiMap();
-    // lenient stubbing to avoid UnnecessaryStubbingException in tests
-    lenient().when(context.request()).thenReturn(request);
-    lenient().when(context.response()).thenReturn(response);
-    lenient().when(context.body()).thenReturn(requestBody);
-    lenient().when(request.headers()).thenReturn(headers);
-    // mark as lenient to avoid unnecessary stubbing failures when response isn't used
-    lenient().when(response.putHeader(anyString(), anyString())).thenReturn(response);
-    // ensure chained calls like response.setStatusCode(...).putHeader(...) don't NPE
-    lenient().when(response.setStatusCode(anyInt())).thenReturn(response);
+        headers = MultiMap.caseInsensitiveMultiMap();
+        // lenient stubbing to avoid UnnecessaryStubbingException in tests
+        lenient().when(context.request()).thenReturn(request);
+        lenient().when(context.response()).thenReturn(response);
+        lenient().when(context.body()).thenReturn(requestBody);
+        lenient().when(request.headers()).thenReturn(headers);
+        // mark as lenient to avoid unnecessary stubbing failures when response isn't used
+        lenient().when(response.putHeader(anyString(), anyString())).thenReturn(response);
+        // ensure chained calls like response.setStatusCode(...).putHeader(...) don't NPE
+        lenient().when(response.setStatusCode(anyInt())).thenReturn(response);
     }
 
     @Test
@@ -98,5 +102,57 @@ class RequestValidatorTest {
 
         assertTrue(result);
         verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testValidateWithNullContextReturnsTrue() {
+        boolean result = RequestValidator.validateProtobufRequest(null);
+        assertTrue(result);
+    }
+
+    @Test
+    void testValidateWithoutContentTypeHeaderSkipsValidation() {
+        // ContentType header not set
+        headers.remove("Content-Type");
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertTrue(result);
+        verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testValidateWithNullBodyReturnsFalse() {
+        headers.add("Content-Type", "application/octet-stream");
+        when(requestBody.buffer()).thenReturn(null);
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertFalse(result);
+        verify(response).setStatusCode(400);
+    }
+
+    @Test
+    void testValidateWithExactMaxSizeReturnsTrue() {
+        headers.add("Content-Type", "application/octet-stream");
+        Buffer buffer = Buffer.buffer(new byte[1024 * 1024]); // Exactly 1MB
+        when(requestBody.buffer()).thenReturn(buffer);
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertTrue(result);
+        verify(response, never()).setStatusCode(anyInt());
+    }
+
+    @Test
+    void testValidateWithOversizedPayloadReturnsFalse() {
+        headers.add("Content-Type", "application/octet-stream");
+        Buffer buffer = Buffer.buffer(new byte[1024 * 1024 + 1]); // 1MB + 1 byte
+        when(requestBody.buffer()).thenReturn(buffer);
+
+        boolean result = RequestValidator.validateProtobufRequest(context);
+
+        assertFalse(result);
+        verify(response).setStatusCode(413);
     }
 }
